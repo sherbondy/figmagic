@@ -32,6 +32,25 @@ Sideboard
 <button id="cancel">Cancel</button>
 <script>
 
+function shuffle(array) {
+  var currentIndex = array.length, temporaryValue, randomIndex;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    // And swap it with the current element.
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+  return array;
+}
+
 document.getElementById('create').onclick = () => {
   const textbox = document.getElementById('count');
   const count = parseInt(textbox.value, 10);
@@ -39,8 +58,8 @@ document.getElementById('create').onclick = () => {
   const textarea = document.getElementById('decklist');
   const decklistText = textarea.value;
 
-  const deck = [];
-  const sideboard = [];
+  let deck = [];
+  let sideboard = [];
   let companion = null;
 
   const lines = decklistText.split(/\r?\n/);
@@ -62,7 +81,7 @@ document.getElementById('create').onclick = () => {
       const countLine = trimmedLine.split(/(\d+)/);
       count = parseInt(countLine[1], 10);
 
-      let cardName = countLine.slice(2, countLine.length).join('');
+      let cardName = countLine.slice(2, countLine.length).join('').trim();
 
       console.log(count, cardName);
 
@@ -77,10 +96,19 @@ document.getElementById('create').onclick = () => {
       }
     }
   }
+  
+  shuffle(deck);
 
   console.log("Deck", deck);
   console.log("Sideboard", sideboard);
   console.log("Companion", companion);
+
+  const hand = [];
+  for (let i = 0; i < 7; i++) {
+    hand.push(deck.pop());
+  }
+
+  console.log("Opening Hand", hand);
 
   parent.postMessage({ pluginMessage: { type: 'create-rectangles', count } }, '*')
 }
