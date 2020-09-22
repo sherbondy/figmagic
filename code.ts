@@ -4,7 +4,7 @@
 // This file holds the main code for the plugins. It has access to the *document*.
 // You can access browser APIs in the <script> tag inside "ui.html" which has a
 // full browser environment (see documentation).
-
+console.log("Command triggering plugin:", figma.command);
 
 async function invertImages(node) {
   const newFills = []
@@ -26,16 +26,25 @@ async function invertImages(node) {
 
       // Wait for the worker's response.
       const newBytes = await new Promise((resolve, reject) => {
-        figma.ui.onmessage = value => resolve(value.bytes)
+        figma.ui.onmessage = value => {
+          if (value.bytes) {
+            resolve(value.bytes as Uint8Array);
+          } else {
+            reject();
+          }
+        }
       })
 
       // Create a new paint for the new image.
-      const newPaint = JSON.parse(JSON.stringify(paint))
-      newPaint.imageHash = figma.createImage(newBytes).hash
-      newFills.push(newPaint)
+      if (newBytes) {
+        const newPaint = JSON.parse(JSON.stringify(paint))
+        // you create images, then assign the image hash to a paint rather than assigning the image directly
+        newPaint.imageHash = figma.createImage(newBytes as Uint8Array).hash
+        newFills.push(newPaint)
+      }
     }
   }
-  
+
   if (hasImage) {
     node.fills = newFills
   }
