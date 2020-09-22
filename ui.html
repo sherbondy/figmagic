@@ -28,6 +28,8 @@ Sideboard
 
 <hr>
 
+<button id="draw">Draw</button>
+
 <button id="create">Create</button>
 <button id="cancel">Cancel</button>
 <script>
@@ -49,6 +51,67 @@ function shuffle(array) {
   }
 
   return array;
+}
+
+function fetchCard(card, isLast) {
+  const cardUriName = encodeURIComponent(card).replace('%20', '+');
+  fetch("https://api.scryfall.com/cards/named?exact="+cardUriName)
+    .then((response) => response.json())
+    .then(data => {
+      console.log(data.image_uris["png"]);
+      const pngUrl = data.image_uris["png"];
+      const cardImage = new Image();
+      // avoid "tainted" canvas error, allow CORS
+      cardImage.crossOrigin = "Anonymous";
+      cardImage.onload = () => {
+        console.log("Card Image loaded")
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+
+        canvas.width = cardImage.width;
+        canvas.height = cardImage.height;
+        ctx.drawImage(cardImage, 0, 0);
+        const imageData = ctx.getImageData(0, 0, cardImage.width, cardImage.height);
+        encode(canvas, ctx, imageData).then((encodedData) => {
+          parent.postMessage(
+            {
+              pluginMessage: {
+                type: 'create-card',
+                bytes: encodedData,
+                width: cardImage.width,
+                height: cardImage.height,
+                label: card,
+                isLast: isLast,
+              }
+            }, 
+            '*'
+          );
+        });
+      }
+      cardImage.src = "https://cors-anywhere.herokuapp.com/"+pngUrl;
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+}
+
+document.getElementById('draw').onclick = () => {
+  parent.postMessage({ pluginMessage: { type: 'get-deck'} }, '*')
+
+  window.onmessage = async (event) => {
+    const message = event.data.pluginMessage;
+    if (message.deck) {
+      let deck = message.deck;
+      console.log("Cards remaining: ", deck.length);
+      
+      if (deck.length > 0) {
+        fetchCard(deck.pop(), true);
+        parent.postMessage({ pluginMessage: { type: 'store-deck', deck: deck } }, '*')
+      } else {
+        parent.postMessage({ pluginMessage: { type: 'lose' } }, '*')
+      }
+    }
+  }
 }
 
 document.getElementById('create').onclick = () => {
@@ -96,7 +159,7 @@ document.getElementById('create').onclick = () => {
       }
     }
   }
-  
+
   shuffle(deck);
 
   console.log("Deck", deck);
@@ -108,9 +171,15 @@ document.getElementById('create').onclick = () => {
     hand.push(deck.pop());
   }
 
+  parent.postMessage({ pluginMessage: { type: 'store-deck', deck: deck } }, '*')
+
   console.log("Opening Hand", hand);
 
-  parent.postMessage({ pluginMessage: { type: 'create-rectangles', count } }, '*')
+  for (let card of hand) {
+    fetchCard(card, card === hand[hand.length - 1]);
+  }
+
+  // parent.postMessage({ pluginMessage: { type: 'create-rectangles', count } }, '*')
 }
 
 document.getElementById('cancel').onclick = () => {

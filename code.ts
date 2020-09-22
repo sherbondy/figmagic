@@ -66,6 +66,8 @@ if (figma.currentPage.selection.length > 0) {
   // Calls to "parent.postMessage" from within the HTML page will trigger this
   // callback. The callback will be passed the "pluginMessage" property of the
   // posted message.
+  let cardCount = 0;
+
   figma.ui.onmessage = msg => {
     // One way of distinguishing between different types of messages sent from
     // your HTML page is to use an object with a "type" property like this.
@@ -82,6 +84,37 @@ if (figma.currentPage.selection.length > 0) {
       figma.viewport.scrollAndZoomIntoView(nodes);
     }
 
+    if (msg.type === 'create-card') {
+      cardCount += 1;
+
+      const rect = figma.createRectangle();
+      rect.resize(msg.width, msg.height);
+      rect.x = cardCount*msg.width;
+      rect.name = msg.label;
+      const cardImage = figma.createImage(msg.bytes as Uint8Array)
+      rect.fills = [{type: 'IMAGE', imageHash: cardImage.hash, scaleMode: "FIT"}];
+      figma.currentPage.appendChild(rect);
+      figma.viewport.scrollAndZoomIntoView([rect]);
+
+      if (msg.isLast) {
+        figma.closePlugin();
+      }
+    }
+
+    if (msg.type === 'store-deck') {
+      figma.clientStorage.setAsync("deck", msg.deck);
+    }
+
+    if (msg.type === 'get-deck') {
+      figma.clientStorage.getAsync("deck").then((deck) => {
+        figma.ui.postMessage({type: 'deck', deck: deck});
+      });
+    }
+
+    if (msg.type === 'lose') {
+      figma.closePlugin('You lose, you ran out of cards');
+    }
+
     // images are stored in the fill of a node
 
     // can also send code to the UI
@@ -89,6 +122,6 @@ if (figma.currentPage.selection.length > 0) {
 
     // Make sure to close the plugin when you're done. Otherwise the plugin will
     // keep running, which shows the cancel button at the bottom of the screen.
-    figma.closePlugin();
+    // figma.closePlugin();
   };
 }
