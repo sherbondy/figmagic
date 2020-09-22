@@ -51,77 +51,83 @@ async function invertImages(node) {
   figma.closePlugin();
 }
 
-// Assume the current selection has fills.
-// In an actual plugin, this won't necessarily be true!
-if (figma.currentPage.selection.length > 0) {
-  const selected = figma.currentPage.selection[0] as GeometryMixin
-  invertImages(selected)
-} else {
-  // This shows the HTML page in "ui.html".
-  figma.showUI(__html__, {width: 480, height: 480});
+let cardCount = 0;
 
-  // Can also have hidden-mode UI just for the sake of message passing to use browser APIs like network...
-  // figma.showUI(__html__, { visible: false })
-
-  // Calls to "parent.postMessage" from within the HTML page will trigger this
-  // callback. The callback will be passed the "pluginMessage" property of the
-  // posted message.
-  let cardCount = 0;
-
-  figma.ui.onmessage = msg => {
-    // One way of distinguishing between different types of messages sent from
-    // your HTML page is to use an object with a "type" property like this.
-    if (msg.type === 'create-rectangles') {
-      const nodes: SceneNode[] = [];
-      for (let i = 0; i < msg.count; i++) {
-        const rect = figma.createRectangle();
-        rect.x = i * 150;
-        rect.fills = [{type: 'SOLID', color: {r: Math.random(), g: Math.random(), b: Math.random()}}];
-        figma.currentPage.appendChild(rect);
-        nodes.push(rect);
-      }
-      figma.currentPage.selection = nodes;
-      figma.viewport.scrollAndZoomIntoView(nodes);
-    }
-
-    if (msg.type === 'create-card') {
-      cardCount += 1;
-
+figma.ui.onmessage = msg => {
+  // One way of distinguishing between different types of messages sent from
+  // your HTML page is to use an object with a "type" property like this.
+  if (msg.type === 'create-rectangles') {
+    const nodes: SceneNode[] = [];
+    for (let i = 0; i < msg.count; i++) {
       const rect = figma.createRectangle();
-      rect.resize(msg.width, msg.height);
-      rect.x = cardCount*msg.width;
-      rect.name = msg.label;
-      const cardImage = figma.createImage(msg.bytes as Uint8Array)
-      rect.fills = [{type: 'IMAGE', imageHash: cardImage.hash, scaleMode: "FIT"}];
+      rect.x = i * 150;
+      rect.fills = [{type: 'SOLID', color: {r: Math.random(), g: Math.random(), b: Math.random()}}];
       figma.currentPage.appendChild(rect);
-      figma.viewport.scrollAndZoomIntoView([rect]);
-
-      if (msg.isLast) {
-        figma.closePlugin();
-      }
+      nodes.push(rect);
     }
+    figma.currentPage.selection = nodes;
+    figma.viewport.scrollAndZoomIntoView(nodes);
+  }
 
-    if (msg.type === 'store-deck') {
-      figma.clientStorage.setAsync("deck", msg.deck);
+  if (msg.type === 'create-card') {
+    cardCount += 1;
+
+    const rect = figma.createRectangle();
+    rect.resize(msg.width, msg.height);
+    rect.x = cardCount*msg.width;
+    rect.name = msg.label;
+    const cardImage = figma.createImage(msg.bytes as Uint8Array)
+    rect.fills = [{type: 'IMAGE', imageHash: cardImage.hash, scaleMode: "FIT"}];
+    figma.currentPage.appendChild(rect);
+    figma.viewport.scrollAndZoomIntoView([rect]);
+
+    if (msg.isLast) {
+      figma.closePlugin();
     }
+  }
 
-    if (msg.type === 'get-deck') {
-      figma.clientStorage.getAsync("deck").then((deck) => {
-        figma.ui.postMessage({type: 'deck', deck: deck});
-      });
-    }
+  if (msg.type === 'store-deck') {
+    figma.clientStorage.setAsync("deck", msg.deck);
+  }
 
-    if (msg.type === 'lose') {
-      figma.closePlugin('You lose, you ran out of cards');
-    }
+  if (msg.type === 'get-deck') {
+    figma.clientStorage.getAsync("deck").then((deck) => {
+      figma.ui.postMessage({type: 'deck', deck: deck, nextAction: msg.nextAction});
+    });
+  }
 
-    // images are stored in the fill of a node
+  if (msg.type === 'lose') {
+    figma.closePlugin('You lose, you ran out of cards');
+  }
 
-    // can also send code to the UI
-    figma.ui.postMessage(42);
+  // images are stored in the fill of a node
 
-    // Make sure to close the plugin when you're done. Otherwise the plugin will
-    // keep running, which shows the cancel button at the bottom of the screen.
-    // figma.closePlugin();
-  };
+  // can also send code to the UI
+  // figma.ui.postMessage(42);
+
+  // Make sure to close the plugin when you're done. Otherwise the plugin will
+  // keep running, which shows the cancel button at the bottom of the screen.
+  // figma.closePlugin();
+};
+
+if (figma.command === 'draw-card') {
+  figma.showUI(__html__, { visible: false });
+  figma.ui.postMessage({type: 'draw'});
+} else {
+  // Assume the current selection has fills.
+  // In an actual plugin, this won't necessarily be true!
+  if (figma.currentPage.selection.length > 0) {
+    const selected = figma.currentPage.selection[0] as GeometryMixin
+    invertImages(selected)
+  } else {
+    // This shows the HTML page in "ui.html".
+    figma.showUI(__html__, {width: 480, height: 480});
+
+    // Can also have hidden-mode UI just for the sake of message passing to use browser APIs like network...
+    // figma.showUI(__html__, { visible: false })
+
+    // Calls to "parent.postMessage" from within the HTML page will trigger this
+    // callback. The callback will be passed the "pluginMessage" property of the
+    // posted message.
+  }
 }

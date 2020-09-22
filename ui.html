@@ -95,23 +95,12 @@ function fetchCard(card, isLast) {
     });
 }
 
-document.getElementById('draw').onclick = () => {
-  parent.postMessage({ pluginMessage: { type: 'get-deck'} }, '*')
+function drawCard() {
+  parent.postMessage({ pluginMessage: { type: 'get-deck', nextAction: 'draw'} }, '*')
+}
 
-  window.onmessage = async (event) => {
-    const message = event.data.pluginMessage;
-    if (message.deck) {
-      let deck = message.deck;
-      console.log("Cards remaining: ", deck.length);
-      
-      if (deck.length > 0) {
-        fetchCard(deck.pop(), true);
-        parent.postMessage({ pluginMessage: { type: 'store-deck', deck: deck } }, '*')
-      } else {
-        parent.postMessage({ pluginMessage: { type: 'lose' } }, '*')
-      }
-    }
-  }
+document.getElementById('draw').onclick = () => {
+  drawCard();
 }
 
 document.getElementById('create').onclick = () => {
@@ -175,8 +164,8 @@ document.getElementById('create').onclick = () => {
 
   console.log("Opening Hand", hand);
 
-  for (let card of hand) {
-    fetchCard(card, card === hand[hand.length - 1]);
+  for (let i = 0; i < hand.length; i++) {
+    fetchCard(hand[i], (i === hand.length - 1));
   }
 
   // parent.postMessage({ pluginMessage: { type: 'create-rectangles', count } }, '*')
@@ -213,6 +202,24 @@ window.onmessage = async (event) => {
     window.parent.postMessage({pluginMessage: {type: 'invert', bytes: newBytes}}, '*')
   } else {
     console.log("got this from the plugin code", message)
+  }
+
+  if (message.type === 'draw') {
+    drawCard();
+  }
+
+  if (message.type === 'deck' && message.deck) {
+    let deck = message.deck;
+    console.log("Cards remaining: ", deck.length);
+    
+    if (message.nextAction === 'draw') {
+      if (deck.length > 0) {
+        fetchCard(deck.pop(), true);
+        parent.postMessage({ pluginMessage: { type: 'store-deck', deck: deck } }, '*')
+      } else {
+        parent.postMessage({ pluginMessage: { type: 'lose' } }, '*')
+      }
+    }
   }
 }
 
