@@ -1,0 +1,14 @@
+{
+  "name": "figmagic",
+  "version": "1.0.0",
+  "description": "Play Magic via Figma",
+  "main": "code.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "author": "",
+  "license": "",
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.16.1"
+  }
+}

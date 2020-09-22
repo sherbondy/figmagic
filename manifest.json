@@ -1,0 +1,19 @@
+{
+  "name": "figmagic",
+  "id": "890209429386055482",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "menu": [
+    {"name": "New Game", "command": "start-game"},
+    {"name": "Draw Card", "command": "draw-card"},
+    {"separator": true},
+    {"name": "Life",
+     "menu": [
+       {"name": "-1 Life", "command": "decrement-life"},
+       {"separator": true},
+       {"name": "+1 Life", "command": "increment-life"}
+     ]
+    }
+  ]
+}
