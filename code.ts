@@ -58,7 +58,7 @@ if (figma.currentPage.selection.length > 0) {
   invertImages(selected)
 } else {
   // This shows the HTML page in "ui.html".
-  figma.showUI(__html__);
+  figma.showUI(__html__, {width: 480, height: 480});
 
   // Can also have hidden-mode UI just for the sake of message passing to use browser APIs like network...
   // figma.showUI(__html__, { visible: false })
